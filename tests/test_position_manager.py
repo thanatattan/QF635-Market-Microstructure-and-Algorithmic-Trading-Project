@@ -1,0 +1,44 @@
+from common.enums import OrderStatus, Side
+from common.events import OrderEvent
+from risk.position_manager import PositionManager
+
+
+def _fill(side, price, qty, fee=0.0):
+    return OrderEvent(timestamp=0, symbol="BTCUSDT", side=side, status=OrderStatus.FILLED,
+                      price=price, quantity=qty, fee=fee)
+
+
+def test_long_roundtrip_profit():
+    pm = PositionManager(initial_capital=100_000)
+    pm.on_fill(_fill(Side.BUY, 100.0, 2.0))
+    assert pm.position == 2.0 and pm.avg_price == 100.0
+    pm.update_mark(110.0)
+    assert pm.unrealized_pnl == 20.0
+    realized = pm.on_fill(_fill(Side.SELL, 110.0, 2.0))
+    assert realized == 20.0
+    assert pm.position == 0.0
+    assert pm.realized_pnl == 20.0
+    assert pm.equity == 100_020.0
+
+
+def test_short_roundtrip_profit():
+    pm = PositionManager(initial_capital=100_000)
+    pm.on_fill(_fill(Side.SELL, 100.0, 1.0))
+    assert pm.position == -1.0
+    realized = pm.on_fill(_fill(Side.BUY, 90.0, 1.0))
+    assert realized == 10.0
+
+
+def test_average_price_on_add():
+    pm = PositionManager(initial_capital=100_000)
+    pm.on_fill(_fill(Side.BUY, 100.0, 1.0))
+    pm.on_fill(_fill(Side.BUY, 200.0, 1.0))
+    assert pm.avg_price == 150.0
+    assert pm.position == 2.0
+
+
+def test_fees_reduce_equity():
+    pm = PositionManager(initial_capital=100_000)
+    pm.on_fill(_fill(Side.BUY, 100.0, 1.0, fee=5.0))
+    pm.update_mark(100.0)
+    assert pm.equity == 100_000 - 5.0

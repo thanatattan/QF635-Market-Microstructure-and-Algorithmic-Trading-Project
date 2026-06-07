@@ -1,0 +1,66 @@
+# =====================================================================
+# Strategy & system parameters for the BTCUSDT short-squeeze system.
+# All thresholds live here so they can be tuned without touching code.
+# =====================================================================
+
+symbol: BTCUSDT
+bar_interval: "5m"          # primary decision timeframe (periodic on candle close)
+
+account:
+  initial_capital: 100000    # USDT — used by the BACKTEST (matches the 100k brief).
+                             # Live trading auto-syncs to the real testnet balance (see sync_live_balance).
+  sync_live_balance: true    # on live start, set capital to the actual testnet USDT balance (demo is locked at ~5k)
+  taker_fee: 0.0004          # Binance USD-M futures taker fee (~4 bps)
+  slippage_bps: 1.0          # assumed slippage per side (backtest), in bps
+
+# ---- Feature / signal parameters -----------------------------------
+features:
+  breakout_lookback_bars: 12     # 12 x 5m = 1 hour rolling high
+  breakout_lookback_bars_2: 24   # 24 x 5m = 2 hour rolling high (secondary)
+  cvd_window_bars: 24            # window for CVD slope / build-up assessment
+  oi_window_bars: 12             # window for open-interest trend
+  vol_window_bars: 48            # ATR / realized-vol window
+  trend_window_bars: 48          # SMA window for the trend filter (48 x 5m = 4h)
+  taker_buy_confirm: 0.55        # buy-aggression ratio required to confirm forced buying
+  oi_rise_pct: 0.005             # min OI increase over window to flag short build-up
+  funding_buildup_max: 0.0       # funding <= this (e.g. <=0, negative) supports short crowding
+  liquidation_lookback_s: 300    # window (s) to count short liquidations as confirmation
+  liquidation_min_notional: 50000  # USDT of short liquidations to count as a squeeze burst
+  spread_max_bps: 5.0            # max spread (bps of mid) for a tradable market
+
+# ---- Signal composition --------------------------------------------
+signal:
+  buildup_lookback_bars: 6       # build-up must have occurred within last N bars before trigger
+  min_buildup_score: 2           # how many build-up sub-conditions must be true (of 3)
+  min_confirm_score: 2           # how many confirmation sub-conditions must be true (of 4)
+  use_trend_filter: true         # only take longs when price is above its trend SMA (A/B this on --split)
+
+# ---- Risk parameters ------------------------------------------------
+risk:
+  risk_per_trade_pct: 0.005      # fraction of equity risked per trade (0.5%)
+  max_position_notional: 50000.0 # hard cap on a single position notional (USDT)
+  max_leverage: 3.0              # max gross notional / equity
+  max_drawdown_pct: 0.10         # kill switch: halt new entries past 10% equity drawdown
+  stop_atr_mult: 1.5             # stop distance = mult x ATR
+  take_profit_r: 2.0             # take profit at R multiple of risk
+  time_stop_bars: 12             # exit if trade open longer than N bars without TP/SL
+  var_confidence: 0.99           # VaR confidence level
+  var_horizon_bars: 1            # VaR horizon in bars
+
+# ---- Live runtime ---------------------------------------------------
+live:
+  oi_poll_seconds: 30            # how often to poll open interest via REST
+  order_type: "MARKET"           # entry order type: MARKET or LIMIT (marketable)
+  ws_stale_seconds: 90           # restart the market-data socket if silent this long
+
+# ---- Dashboard ------------------------------------------------------
+dashboard:
+  host: "0.0.0.0"            # 0.0.0.0 = reachable on the VM's public IP (localhost still works); use 127.0.0.1 for local-only
+  port: 8050
+  refresh_ms: 1000
+  sink: "file"               # "file" (one host) or "redis" (cross-machine; set REDIS_URL env)
+  state_dir: null            # null -> <project>/state ; set a path to override
+  history_points: 2000       # rolling points kept for the charts
+  stale_after_seconds: 10    # show a STALE warning if no update within this window
+  read_only: false           # true -> hide the kill-switch (for a public/shared dashboard)
+  redis_prefix: "btcsqueeze" # key prefix when sink: redis

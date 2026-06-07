@@ -1,0 +1,15 @@
+[Unit]
+Description=BTC Squeeze trading engine (live testnet -> state sink)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+# EDIT: set your username and the path where you cloned the project
+User=YOUR_USER
+WorkingDirectory=/home/YOUR_USER/Project
+ExecStart=/home/YOUR_USER/Project/.venv/bin/python -m scripts.run_live
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

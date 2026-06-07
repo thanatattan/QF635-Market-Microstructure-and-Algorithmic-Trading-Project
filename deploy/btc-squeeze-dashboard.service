@@ -1,0 +1,17 @@
+[Unit]
+Description=BTC Squeeze dashboard (reads state sink, serves web UI)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+# EDIT: set your username and the path where you cloned the project
+User=YOUR_USER
+WorkingDirectory=/home/YOUR_USER/Project
+# Dev server (simplest). For production swap to the gunicorn line below.
+ExecStart=/home/YOUR_USER/Project/.venv/bin/python -m scripts.run_dashboard
+# ExecStart=/home/YOUR_USER/Project/.venv/bin/gunicorn -b 0.0.0.0:8050 dashboard.wsgi:server
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

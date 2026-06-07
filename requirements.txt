@@ -1,0 +1,22 @@
+# Core
+python-binance>=1.0.19      # Binance Futures testnet REST + websockets
+pandas>=2.0
+numpy>=1.24
+scipy>=1.10                  # VaR / statistics
+
+# Dashboard
+dash>=2.14
+plotly>=5.18
+
+# Config / infra
+python-dotenv>=1.0
+PyYAML>=6.0
+requests>=2.31
+
+# Optional: only needed when dashboard.sink = "redis" (cloud/cross-machine hosting)
+# redis>=5.0
+# Optional: production WSGI server for the dashboard on a VM (see DEPLOY.md)
+# gunicorn>=21.0
+
+# Dev / test
+pytest>=7.4
