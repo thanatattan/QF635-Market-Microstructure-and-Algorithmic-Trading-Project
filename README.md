@@ -124,12 +124,6 @@ tests/       unit tests (indicators, signal, position, risk, backtest)
 config/      params.yaml (all tunables)
 ```
 
-## Team roles
-
-- **Member 1 — Data/API + Gateway:** `gateway/`, `data/`
-- **Member 2 — Features + Strategy:** `features/`, `strategy/`
-- **Member 3 — Risk + Backtest + Dashboard:** `risk/`, `backtest/`, `dashboard/`
-
 ## Known limitations (state on slides)
 
 - **Liquidation history is not available via REST** (live stream only), so the backtest omits the
