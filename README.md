@@ -1,7 +1,7 @@
 # BTCUSDT Short-Squeeze Momentum — Live Paper Trading System
 
 A real-time, event-driven algorithmic trading system that detects **short-squeeze-driven
-momentum** in BTCUSDT and paper-trades it on the **Binance USD-Ⓜ Futures testnet**.
+momentum** in BTCUSDT and paper-trades it on the **Binance USD-Futures testnet**.
 
 Built for the QF635 Algorithmic Trading project. It is a full trading system — not just a
 backtest — covering the three graded components:
@@ -84,26 +84,14 @@ Compares **Squeeze (OF-confirmed)** vs **Naive breakout** vs **Buy & hold**.
 **Live paper trading + dashboard (two processes):**
 ```bash
 python -m scripts.run_live          # engine: streams testnet, publishes state via the sink
-python -m scripts.run_dashboard     # dashboard reader at http://127.0.0.1:8050
+python -m scripts.run_dashboard     # dashboard reader at http://136.110.51.155:8050/
 ```
 
 **See the dashboard WITHOUT the live engine (no keys):** replay data into the sink, then open the reader.
 ```bash
 python -m scripts.run_demo --synthetic --delay 0.3   # animated, ~live-looking (Ctrl+C to stop)
 python -m scripts.run_demo --synthetic               # instant fill, then a static view
-python -m scripts.run_dashboard                      # in another terminal -> http://127.0.0.1:8050
-```
-
-**Hosting the dashboard for others (presentation):**
-- *Same machine / one VM:* keep `sink: file` and run both commands; expose with a tunnel
-  (`cloudflared tunnel --url http://localhost:8050`) or set `dashboard.host: 0.0.0.0`.
-- *Cloud / cross-machine:* set `dashboard.sink: redis` and `REDIS_URL` (e.g. free Upstash). Run
-  the engine where your keys are (laptop), deploy `run_dashboard` to a free host (Render/HF) — it
-  reads Redis, needs no keys. Set `dashboard.read_only: true` to hide the kill-switch publicly.
-
-**Tests:**
-```bash
-pytest -q
+python -m scripts.run_dashboard                      # in another terminal -> http://136.110.51.155:8050/
 ```
 
 ## Repository layout
@@ -132,4 +120,3 @@ config/      params.yaml (all tunables)
 - Testnet liquidity is thin, so live fills are not representative of mainnet — the backtest on real
   data is the credible performance estimate; the live system demonstrates the real-time pipeline.
 - PnL is not the grading target; this project is graded on analytic, risk, and execution design.
-```
