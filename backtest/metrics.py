@@ -58,16 +58,17 @@ def compute(equity: list[float], trades: list[dict],
     sharpe = (mean / std * ann) if std > 0 else 0.0
     sortino = (mean / dstd * ann) if dstd > 0 else 0.0
 
-    closing = [t["realized_pnl"] for t in trades if abs(t.get("realized_pnl", 0.0)) > 1e-9]
-    wins = [p for p in closing if p > 0]
-    losses = [p for p in closing if p < 0]
-    hit = len(wins) / len(closing) if closing else 0.0
+    # `trades` are completed round-trips (one entry->exit each), so count them directly
+    pnls = [t.get("realized_pnl", 0.0) for t in trades]
+    wins = [p for p in pnls if p > 0]
+    losses = [p for p in pnls if p < 0]
+    hit = len(wins) / len(pnls) if pnls else 0.0
     profit_factor = (sum(wins) / abs(sum(losses))) if losses else (math.inf if wins else 0.0)
 
     return Metrics(
         total_return=(equity[-1] - equity[0]) / equity[0],
         sharpe=sharpe, sortino=sortino, max_drawdown=_max_drawdown(equity),
-        num_trades=len(closing), hit_rate=hit,
+        num_trades=len(pnls), hit_rate=hit,
         avg_win=(sum(wins) / len(wins)) if wins else 0.0,
         avg_loss=(sum(losses) / len(losses)) if losses else 0.0,
         profit_factor=profit_factor, final_equity=equity[-1],

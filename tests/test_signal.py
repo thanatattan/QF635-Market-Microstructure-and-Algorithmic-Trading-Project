@@ -58,6 +58,18 @@ def test_trend_filter_off_allows_entry(params):
     assert d.enter is True   # toggle off -> downtrend doesn't block
 
 
+def test_funding_none_not_supportive(params):
+    eng = SqueezeSignalEngine(params)
+    d = eng.evaluate(_snap(funding_rate=None))   # unknown funding must not count as supportive
+    assert d.buildup_conditions["funding_support"] is False
+
+
+def test_holds_above_not_in_confirm(params):
+    eng = SqueezeSignalEngine(params)
+    d = eng.evaluate(_snap())
+    assert "holds_above" not in d.confirm_conditions   # redundant condition removed
+
+
 def test_no_entry_without_breakout(params):
     eng = SqueezeSignalEngine(params)
     d = eng.evaluate(_snap(breakout=False))

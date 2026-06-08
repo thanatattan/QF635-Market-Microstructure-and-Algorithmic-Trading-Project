@@ -43,6 +43,8 @@ class SimulatedGateway(Gateway):
         self._filters = SymbolFilters(tick_size=0.1, step_size=0.001, min_notional=5.0)
         self._last_close: float = 0.0
         self._last_ts: float = 0.0
+        # orders decided on bar T fill at bar T+1's open (conservative, no look-ahead)
+        self._fill_price: float = 0.0
 
     def get_filters(self) -> SymbolFilters:
         return self._filters
@@ -52,15 +54,19 @@ class SimulatedGateway(Gateway):
         log.info("SimulatedGateway replaying %d bars for %s", len(self._data), self.symbol)
         has_oi = "open_interest" in self._data.columns
         has_funding = "funding_rate" in self._data.columns
-        for row in self._data.itertuples(index=False):
+        # next-bar open for each bar (last bar falls back to its own close)
+        next_opens = self._data["open"].shift(-1).tolist()
+        for i, row in enumerate(self._data.itertuples(index=False)):
             self._last_close = float(row.close)
             self._last_ts = float(row.close_time)
+            nxt = next_opens[i]
+            self._fill_price = float(nxt) if nxt == nxt else float(row.close)  # nan-safe
 
             if has_oi and not pd.isna(getattr(row, "open_interest")):
                 self._emit_open_interest(OpenInterest(
                     timestamp=self._last_ts, open_interest=float(row.open_interest)))
 
-            funding = float(getattr(row, "funding_rate")) if has_funding and not pd.isna(getattr(row, "funding_rate")) else 0.0
+            funding = float(getattr(row, "funding_rate")) if has_funding and not pd.isna(getattr(row, "funding_rate")) else None
             self._emit_mark_price(MarkPrice(
                 timestamp=self._last_ts, mark_price=self._last_close,
                 funding_rate=funding, next_funding_time=0))
@@ -91,8 +97,9 @@ class SimulatedGateway(Gateway):
             return OrderEvent(timestamp=self._last_ts, symbol=self.symbol, side=request.side,
                               status=OrderStatus.REJECTED, price=0.0, quantity=0.0,
                               reason="quantity rounds to zero")
-        slip = self._last_close * (self._slippage_bps / 1e4)
-        fill_price = self._last_close + slip if request.side is Side.BUY else self._last_close - slip
+        ref = self._fill_price or self._last_close   # next-bar open (fallback to close)
+        slip = ref * (self._slippage_bps / 1e4)
+        fill_price = ref + slip if request.side is Side.BUY else ref - slip
         fee = fill_price * qty * self._taker_fee
         ev = OrderEvent(timestamp=self._last_ts, symbol=self.symbol, side=request.side,
                         status=OrderStatus.FILLED, price=fill_price, quantity=qty,

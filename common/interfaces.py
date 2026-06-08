@@ -103,7 +103,7 @@ class AggTrade:
 class MarkPrice:
     timestamp: float
     mark_price: float
-    funding_rate: float         # current (predicted) funding rate
+    funding_rate: float | None  # current funding rate; None when unknown
     next_funding_time: int      # ms epoch
 
 

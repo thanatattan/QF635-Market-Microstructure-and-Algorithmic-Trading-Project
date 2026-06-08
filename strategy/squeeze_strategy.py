@@ -113,10 +113,14 @@ class SqueezeStrategy:
 
         if reason:
             ev = self._om.close(reason=reason)
-            self._trade = None
-            if ev is not None:
+            if ev is not None and ev.is_fill:
+                self._trade = None
                 self.last_action = f"EXIT @ {ev.price:.2f} ({reason})"
                 log.info(self.last_action)
+            else:
+                # close rejected/unfilled — keep _trade so we retry next bar (no orphaned position)
+                self.last_action = f"EXIT {reason} NOT filled ({self._om.last_rejection}); will retry"
+                log.warning(self.last_action)
 
     def state_snapshot(self) -> dict:
         if self._trade is None:

@@ -88,3 +88,19 @@ def test_stop_is_below_entry_and_reachable(params):
     _bar(gw, pm, strat, _snap(100_000.0), _enter_decision())
     t = strat._trade
     assert t.stop_price < t.entry_price < t.take_profit_price
+
+
+def test_rejected_close_keeps_trade(params):
+    """If the exit order is rejected, _trade must NOT be cleared (no orphaned position)."""
+    from common.enums import OrderStatus, Side
+    from common.events import OrderEvent
+    gw, pm, strat = _build(params)
+    _bar(gw, pm, strat, _snap(100_000.0), _enter_decision())
+    assert strat.in_position
+    # force the close to report a rejection
+    strat._om.close = lambda reason="exit": OrderEvent(
+        timestamp=0, symbol="BTCUSDT", side=Side.SELL, status=OrderStatus.REJECTED,
+        price=0.0, quantity=0.0, reason="simulated rejection")
+    stop = strat._trade.stop_price
+    _bar(gw, pm, strat, _snap(stop - 50.0), _hold_decision())   # would trigger stop
+    assert strat.in_position   # trade retained for retry, not orphaned

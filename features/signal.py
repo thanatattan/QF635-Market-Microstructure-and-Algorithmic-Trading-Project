@@ -51,7 +51,7 @@ class SqueezeSignalEngine:
 
         # short build-up (3 sub-conditions)
         b_oi = snap.oi_change_pct is not None and snap.oi_change_pct >= self._oi_rise_pct
-        b_funding = snap.funding_rate <= self._funding_max
+        b_funding = snap.funding_rate is not None and snap.funding_rate <= self._funding_max
         b_absorbed = (
             snap.cvd_slope is not None and snap.cvd_slope <= 0
             and snap.price_change_pct is not None and snap.price_change_pct >= -0.002
@@ -67,11 +67,15 @@ class SqueezeSignalEngine:
         buildup_recent = self._bars_since_buildup <= self._buildup_lookback
 
         # forced-cover confirmation (4 sub-conditions)
+        # NOTE: "price holds above the level" is NOT counted here — it is already guaranteed by
+        # the breakout gate below, so counting it would double-count and weaken the threshold.
+        # Real confirmations: CVD up, taker-buy dominance, short-liquidation burst.
+        # Backtest has no liquidation feed (short_liq always False), so min_confirm=2 means it
+        # needs cvd_up AND taker_buy; live can satisfy any 2 of the 3.
         c_cvd = snap.bar_volume_delta > 0 or (snap.cvd_slope is not None and snap.cvd_slope > 0)
         c_taker = snap.taker_buy_ratio >= self._taker_confirm
         c_liq = snap.short_liq_notional >= self._liq_min
-        c_holds = snap.breakout  # close is above the broken level
-        confirm_conditions = {"cvd_up": c_cvd, "taker_buy": c_taker, "short_liq": c_liq, "holds_above": c_holds}
+        confirm_conditions = {"cvd_up": c_cvd, "taker_buy": c_taker, "short_liq": c_liq}
         confirm_score = sum(confirm_conditions.values())
         confirmed = confirm_score >= self._min_confirm
 

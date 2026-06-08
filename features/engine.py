@@ -39,7 +39,7 @@ class FeatureSnapshot:
     # open interest / funding
     open_interest: float | None
     oi_change_pct: float | None
-    funding_rate: float
+    funding_rate: float | None   # None when funding is unknown (don't treat as supportive)
     # volatility / liquidity
     atr: float | None
     realized_vol: float | None
@@ -73,7 +73,7 @@ class FeatureEngine:
 
         self._cvd_cum = 0.0
         self._latest_spread_bps: float | None = None
-        self._latest_funding: float = 0.0
+        self._latest_funding: float | None = None   # unknown until a mark-price update arrives
         self._latest_oi: float | None = None
         self._liq = LiquidationTracker(self._liq_lookback_s)
 
@@ -83,7 +83,8 @@ class FeatureEngine:
             self._latest_spread_bps = ob.spread_bps
 
     def on_mark_price(self, m: MarkPrice) -> None:
-        self._latest_funding = m.funding_rate
+        if m.funding_rate is not None:   # only update when funding is actually known
+            self._latest_funding = m.funding_rate
 
     def on_open_interest(self, oi: OpenInterest) -> None:
         self._latest_oi = oi.open_interest

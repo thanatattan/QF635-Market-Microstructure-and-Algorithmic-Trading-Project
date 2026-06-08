@@ -106,7 +106,7 @@ def create_app(sink: StateSink, params: dict) -> Dash:
                  "#f38ba8" if risk.get("current_drawdown", 0) > 0.05 else "#cdd6f4"),
             card("VaR 99%", f"${s.get('var', 0):,.0f}"),
             card("VaR 99% hist", f"${s.get('var_historical', 0):,.0f}"),
-            card("Funding", f"{s.get('funding_rate', 0)*100:.4f}%"),
+            card("Funding", f"{(s.get('funding_rate') or 0)*100:.4f}%"),
             card("Kill", "ON" if risk.get("kill_switch") else "off",
                  "#f38ba8" if risk.get("kill_switch") else "#9399b2"),
         ]

@@ -21,7 +21,7 @@ def run_engine_backtest(df: pd.DataFrame, params: dict, signal_mode: str = "full
         engine.order_manager.close(reason="backtest_end_flatten")
         engine.risk_manager.on_equity_update(engine.position_manager.equity)
     equity = engine.risk_manager.equity_curve
-    return M.compute(equity, engine.position_manager.trades), equity
+    return M.compute(equity, engine.position_manager.round_trips), equity
 
 
 def buy_and_hold(df: pd.DataFrame, params: dict) -> tuple[M.Metrics, list[float]]:

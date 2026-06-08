@@ -46,6 +46,8 @@ class BinanceFuturesGateway(Gateway):
         self._streams: list[str] = []
         self._conn_key = None
         self._last_msg_time: float = 0.0
+        self._last_mark: float = 0.0      # latest mark price (fallback fill price)
+        self._last_mid: float = 0.0       # latest book mid (fallback fill price)
         self._running = False
 
     # lifecycle
@@ -180,9 +182,12 @@ class BinanceFuturesGateway(Gateway):
             bids=[PriceLevel(float(data["b"]), float(data["B"]))],
             asks=[PriceLevel(float(data["a"]), float(data["A"]))],
         )
+        if ob.mid is not None:
+            self._last_mid = ob.mid
         self._emit_orderbook(ob)
 
     def _handle_mark_price(self, data: dict) -> None:
+        self._last_mark = float(data["p"])
         self._emit_mark_price(MarkPrice(
             timestamp=float(data["E"]), mark_price=float(data["p"]),
             funding_rate=float(data["r"]), next_funding_time=int(data["T"]),
@@ -258,7 +263,16 @@ class BinanceFuturesGateway(Gateway):
                 status=OrderStatus.REJECTED, price=0.0, quantity=0.0, reason=str(exc),
             )
         executed_qty = float(resp.get("executedQty", 0.0))
-        avg_price = float(resp.get("avgPrice", 0.0)) or (request.price or 0.0)
+        # avgPrice can come back 0 (e.g. RESULT not populated) — fall back to a real reference
+        avg_price = float(resp.get("avgPrice", 0.0)) or (request.price or 0.0) \
+            or self._last_mark or self._last_mid
+        if executed_qty > 0 and avg_price <= 0:
+            log.error("Filled order has no usable price (avgPrice=0, no mark/mid) — rejecting to protect PnL")
+            return OrderEvent(
+                timestamp=time.time() * 1000, symbol=self.symbol, side=request.side,
+                status=OrderStatus.REJECTED, price=0.0, quantity=0.0,
+                reason="no fill price available", order_id=str(resp.get("orderId")),
+            )
         fee = avg_price * executed_qty * self._taker_fee
         status = OrderStatus(resp.get("status", "NEW")) if resp.get("status") in OrderStatus._value2member_map_ else OrderStatus.NEW
         ev = OrderEvent(
