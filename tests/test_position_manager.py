@@ -37,6 +37,13 @@ def test_average_price_on_add():
     assert pm.position == 2.0
 
 
+def test_round_qty_no_float_dust():
+    from gateway.base import SymbolFilters
+    f = SymbolFilters(tick_size=0.1, step_size=0.001, min_notional=5.0)
+    assert f.round_qty(0.167) == 0.167      # must not floor to 0.166 via float error
+    assert f.round_qty(0.123) == 0.123
+
+
 def test_round_trip_recorded():
     pm = PositionManager(initial_capital=100_000)
     pm.on_fill(_fill(Side.BUY, 100.0, 2.0))     # open

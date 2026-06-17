@@ -70,6 +70,17 @@ def test_holds_above_not_in_confirm(params):
     assert "holds_above" not in d.confirm_conditions   # redundant condition removed
 
 
+def test_use_oi_toggle(params):
+    import copy
+    on = SqueezeSignalEngine(params)
+    assert "oi_rising" in on.evaluate(_snap()).buildup_conditions
+    p = copy.deepcopy(params); p["signal"]["use_oi"] = False
+    off = SqueezeSignalEngine(p)
+    conds = off.evaluate(_snap()).buildup_conditions
+    assert "oi_rising" not in conds
+    assert set(conds) == {"funding_support", "sell_absorbed"}
+
+
 def test_no_entry_without_breakout(params):
     eng = SqueezeSignalEngine(params)
     d = eng.evaluate(_snap(breakout=False))

@@ -90,7 +90,17 @@ def test_stop_is_below_entry_and_reachable(params):
     assert t.stop_price < t.entry_price < t.take_profit_price
 
 
-def test_rejected_close_keeps_trade(params):
+def test_momentum_fade_toggle_off(params):
+    """With use_momentum_fade off, a fade bar must NOT exit (no momentum_fade)."""
+    import copy
+    p = copy.deepcopy(params); p["risk"]["use_momentum_fade"] = False
+    gw, pm, strat = _build(p)
+    _bar(gw, pm, strat, _snap(100_000.0), _enter_decision())
+    assert strat.in_position
+    # a fade bar (net selling, CVD down) that's between stop and TP — would normally momentum_fade
+    fade = _snap(100_010.0, taker_buy_ratio=0.3, bar_volume_delta=-5.0, cvd_slope=-1.0)
+    _bar(gw, pm, strat, fade, _hold_decision())
+    assert strat.in_position   # not exited, because momentum-fade is disabled
     """If the exit order is rejected, _trade must NOT be cleared (no orphaned position)."""
     from common.enums import OrderStatus, Side
     from common.events import OrderEvent

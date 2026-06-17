@@ -43,20 +43,24 @@ class SqueezeSignalEngine:
         # "full" = squeeze pipeline; "naive_breakout" = breakout only (benchmark)
         self._mode = s.get("mode", "full")
         self._use_trend_filter = bool(s.get("use_trend_filter", True))
+        self._use_oi = bool(s.get("use_oi", True))   # OI history is ~30d; turn off for long backtests
         self._bars_since_buildup = 10**9   # large = "no recent build-up"
 
     def evaluate(self, snap: FeatureSnapshot) -> SignalDecision:
         # liquidity / tradability gate
         tradable = snap.spread_bps is None or snap.spread_bps <= self._spread_max
 
-        # short build-up (3 sub-conditions)
-        b_oi = snap.oi_change_pct is not None and snap.oi_change_pct >= self._oi_rise_pct
+        # short build-up sub-conditions. OI is optional (history only ~30 days), so it is
+        # only included when use_oi is on — otherwise build-up = funding + absorbed-selling.
         b_funding = snap.funding_rate is not None and snap.funding_rate <= self._funding_max
         b_absorbed = (
             snap.cvd_slope is not None and snap.cvd_slope <= 0
             and snap.price_change_pct is not None and snap.price_change_pct >= -0.002
         )
-        buildup_conditions = {"oi_rising": b_oi, "funding_support": b_funding, "sell_absorbed": b_absorbed}
+        buildup_conditions = {"funding_support": b_funding, "sell_absorbed": b_absorbed}
+        if self._use_oi:
+            b_oi = snap.oi_change_pct is not None and snap.oi_change_pct >= self._oi_rise_pct
+            buildup_conditions = {"oi_rising": b_oi, **buildup_conditions}
         buildup_score = sum(buildup_conditions.values())
         buildup_now = buildup_score >= self._min_buildup
 

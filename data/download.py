@@ -71,10 +71,21 @@ def download_open_interest(symbol: str, period: str, start_ms: int, end_ms: int)
 
 def download_funding(symbol: str, start_ms: int, end_ms: int) -> pd.DataFrame:
     client = _client()
-    data = client.futures_funding_rate(symbol=symbol, startTime=start_ms, endTime=end_ms, limit=1000)
-    df = pd.DataFrame(data)
+    rows: list[dict] = []
+    cur = start_ms
+    while cur < end_ms:                      # paginate (1000/call ≈ 333 days) for long ranges
+        batch = client.futures_funding_rate(symbol=symbol, startTime=cur, endTime=end_ms, limit=1000)
+        if not batch:
+            break
+        rows.extend(batch)
+        cur = int(batch[-1]["fundingTime"]) + 1
+        time.sleep(0.2)
+        if len(batch) < 1000:
+            break
+    df = pd.DataFrame(rows)
     if df.empty:
         return pd.DataFrame(columns=["close_time", "funding_rate"])
+    df = df.drop_duplicates("fundingTime")
     df["close_time"] = df["fundingTime"].astype("int64")
     df["funding_rate"] = df["fundingRate"].astype(float)
     return df[["close_time", "funding_rate"]]

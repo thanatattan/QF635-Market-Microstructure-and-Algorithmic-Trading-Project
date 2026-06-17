@@ -31,9 +31,12 @@ features:
 # ---- Signal composition --------------------------------------------
 signal:
   buildup_lookback_bars: 6       # build-up must have occurred within last N bars before trigger
-  min_buildup_score: 2           # how many build-up sub-conditions must be true (of 3)
-  min_confirm_score: 2           # how many confirmation sub-conditions must be true (of 4)
+  min_buildup_score: 2           # how many build-up sub-conditions must be true
+  min_confirm_score: 2           # how many confirmation sub-conditions must be true
   use_trend_filter: true         # only take longs when price is above its trend SMA (A/B this on --split)
+  use_oi: true                   # include open-interest in build-up. Turn OFF for long backtests
+                                 # (OI history is only ~30 days); live keeps it ON. With OI off,
+                                 # build-up = funding + absorbed-selling (2 conditions).
 
 # ---- Risk parameters ------------------------------------------------
 risk:
@@ -44,6 +47,7 @@ risk:
   stop_atr_mult: 1.5             # stop distance = mult x ATR
   take_profit_r: 2.0             # take profit at R multiple of risk
   time_stop_bars: 12             # exit if trade open longer than N bars without TP/SL
+  use_momentum_fade: true        # soft exit when buying dries up (toggle for ablation)
   var_confidence: 0.99           # VaR confidence level
   var_horizon_bars: 1            # VaR horizon in bars
 

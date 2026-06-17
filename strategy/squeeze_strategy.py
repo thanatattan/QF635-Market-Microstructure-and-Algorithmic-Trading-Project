@@ -35,6 +35,7 @@ class SqueezeStrategy:
         self._time_stop = int(params["risk"]["time_stop_bars"])
         self._tp_r = float(params["risk"]["take_profit_r"])
         self._stop_atr_mult = float(params["risk"]["stop_atr_mult"])
+        self._use_momentum_fade = bool(params["risk"].get("use_momentum_fade", True))
         self._trade: TradeState | None = None
         self.last_action: str = ""
 
@@ -106,7 +107,7 @@ class SqueezeStrategy:
             reason = "take_profit"
         elif t.bars_in_trade >= self._time_stop:
             reason = "time_stop"
-        elif snap.taker_buy_ratio < 0.5 and (snap.cvd_slope or 0) < 0:
+        elif self._use_momentum_fade and snap.taker_buy_ratio < 0.5 and (snap.cvd_slope or 0) < 0:
             # taker_buy_ratio < 0.5 already implies bar_volume_delta < 0 (same thing),
             # so the rule is: this bar net-sold AND cumulative CVD is rolling over.
             reason = "momentum_fade"

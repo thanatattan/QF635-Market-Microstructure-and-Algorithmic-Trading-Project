@@ -53,9 +53,13 @@ def main() -> None:
     ap.add_argument("--synthetic", action="store_true", help="use generated synthetic data")
     ap.add_argument("--bars", type=int, default=3000, help="synthetic bars")
     ap.add_argument("--split", type=float, default=0.0, help="in-sample fraction for walk-forward (0=off)")
+    ap.add_argument("--no-oi", action="store_true", help="drop OI from build-up (for long backtests; OI history is ~30d)")
     args = ap.parse_args()
 
     params = load_params()
+    if args.no_oi:
+        params["signal"]["use_oi"] = False
+        log.warning("OI disabled in build-up (long-backtest mode)")
     symbol = args.symbol or params["symbol"]
     interval = args.interval or params["bar_interval"]
 

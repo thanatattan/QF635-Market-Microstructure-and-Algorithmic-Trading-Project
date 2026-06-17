@@ -33,8 +33,9 @@ class SymbolFilters:
         return round(round(price / self.tick_size) * self.tick_size, 8)
 
     def round_qty(self, qty: float) -> float:
-        # floor to step size to avoid exceeding intended size
-        steps = int(qty / self.step_size)
+        # floor to step size; +epsilon counters float-division error
+        # (e.g. 0.167/0.001 == 166.9999996 -> would wrongly floor to 166, leaving dust)
+        steps = int(qty / self.step_size + 1e-9)
         return round(steps * self.step_size, 8)
 
 
